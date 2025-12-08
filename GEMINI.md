@@ -189,6 +189,9 @@ pnpm run db:seed
 │   │   ├── bill-notes-dialog.tsx     # Notes modal dialog
 │   │   ├── assign-bills-form.tsx     # Form for assigning bills
 │   │   └── pagination.tsx            # Pagination component
+│   ├── users/
+│   │   ├── users-table.tsx           # Table for displaying users
+│   │   └── create-user-form.tsx      # Form for creating new users
 │   ├── dashboard/
 │   │   ├── kpi-cards.tsx             # KPI metric cards
 │   │   ├── aging-chart.tsx           # Aging distribution chart
@@ -636,6 +639,7 @@ export async function clearAllCache(): Promise<void> {
 
 6. **Admin Pages**:
    - User Management (`/admin/users`)
+     - Components: `UsersTable`, `CreateUserForm`
    - Cache Management (`/admin/cache`)
    - Components in `app/(dashboard)/admin/`
 
