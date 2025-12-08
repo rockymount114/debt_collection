@@ -1,0 +1,133 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+
+  provider = "sqlserver"
+
+}
+
+model User {
+  id                    Int                    @id @default(autoincrement())
+  username              String                 @unique @db.NVarChar(50)
+  email                 String                 @unique @db.NVarChar(100)
+  passwordHash          String                 @db.NVarChar(255)
+  fullName              String?                @db.NVarChar(100)
+  role                  String
+  isActive              Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  lastLogin             DateTime?
+  
+  assignedBills         BillAssignment[]       @relation("AssignedCollector")
+  createdAssignments    BillAssignment[]       @relation("AssignmentCreator")
+  activities            CollectionActivity[]
+  assignedTasks         CollectionTask[]       @relation("TaskAssignee")
+  completedTasks        CollectionTask[]       @relation("TaskCompleter")
+  queueAssignments      QueueAssignment[]
+
+  @@map("users")
+}
+
+
+
+model BillAssignment {
+  id              Int       @id @default(autoincrement())
+  billId          String    @unique @db.NVarChar(50)
+  userId          Int
+  assignedAt      DateTime  @default(now())
+  assignedBy      Int
+  
+  user            User      @relation("AssignedCollector", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedByUser  User      @relation("AssignmentCreator", fields: [assignedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("bill_assignments")
+}
+
+model QueueAssignment {
+  id                  Int       @id @default(autoincrement())
+  customerId          String    @db.VarChar(50)
+  queueName           String    @db.VarChar(50)
+  collectorId         Int?
+  status              String    @default("Active") @db.VarChar(50)
+  followUpDate        DateTime? @db.Date
+  amountDue           Decimal   @db.Decimal(15, 2)
+  creditsAvailable    Decimal   @db.Decimal(15, 2)
+  lastActivityDate    DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  collector           User?     @relation(fields: [collectorId], references: [id])
+
+  @@map("queue_assignments")
+}
+
+model CollectionActivity {
+  id                Int       @id @default(autoincrement())
+  customerId        String    @db.VarChar(50)
+  customerSource    String    @db.VarChar(10)
+  activityType      String    @db.VarChar(50)
+  activityDate      DateTime
+  performedBy       Int
+  contactMethod     String?   @db.VarChar(50)
+  contactOutcome    String?   @db.VarChar(50)
+  notes             String?   @db.Text
+  amountDiscussed   Decimal?  @db.Decimal(15, 2)
+  promiseAmount     Decimal?  @db.Decimal(15, 2)
+  promiseDate       DateTime? @db.Date
+  nextAction        String?   @db.VarChar(50)
+  nextActionDate    DateTime? @db.Date
+  statusChange      String?   @db.VarChar(50)
+  createdAt         DateTime  @default(now())
+  
+  user              User      @relation(fields: [performedBy], references: [id])
+
+  @@map("collection_activities")
+}
+
+model CollectionTask {
+  id                Int       @id @default(autoincrement())
+  customerId        String    @db.VarChar(50)
+  customerSource    String    @db.VarChar(10)
+  assignedTo        Int
+  taskType          String    @db.VarChar(50)
+  taskDescription   String?   @db.Text
+  dueDate           DateTime  @db.Date
+  priority          String    @default("Normal")
+  status            String    @default("Pending")
+  completedDate     DateTime?
+  completedBy       Int?
+  notes             String?   @db.Text
+  createdAt         DateTime  @default(now())
+  
+  assignee          User      @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  completer         User?     @relation("TaskCompleter", fields: [completedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("collection_tasks")
+}
+
+
+
+model QueueDefinition {
+  id          Int      @id @default(autoincrement())
+  queueName   String   @unique @db.VarChar(50)
+  agingMin    Int?
+  agingMax    Int?
+  description String?  @db.Text
+  sortOrder   Int?
+  isActive    Boolean  @default(true)
+
+  @@map("queue_definitions")
+}
+
+model SystemSetting {
+  id            Int      @id @default(autoincrement())
+  settingKey    String   @unique @db.VarChar(100)
+  settingValue  String?  @db.Text
+  description   String?  @db.Text
+  updatedAt     DateTime @updatedAt
+
+  @@map("system_settings")
+}

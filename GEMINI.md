@@ -70,13 +70,17 @@ This is a **Municipal Collections Management System** - a Next.js-based debt col
 pnpm install
 
 # Setup environment variables
-cp .env.example .env.local
+# .env.local is created automatically during setup with placeholder values.
+# cp .env.example .env.local
 
-# Generate Prisma client (if using Prisma)
-pnpm prisma generate
+# Generate Prisma client
+pnpm run prisma:generate
 
 # Initialize collections database
-pnpm run db:init
+# Note: 'pnpm run prisma:migrate-dev' is currently experiencing connection issues.
+# It is temporarily configured to be skipped. Please resolve DATABASE_URL in .env.local
+# and run 'pnpm run prisma:migrate-dev' manually when ready.
+pnpm run prisma:migrate-dev
 
 # Run development server
 pnpm dev
@@ -101,9 +105,10 @@ pnpm lint
 # Redis for caching large datasets
 # Configuration in .env.local file
 
-# Prisma migrations (if using Prisma)
-pnpm prisma migrate dev
-pnpm prisma migrate deploy
+# Prisma migrations
+# Use the custom script to ensure environment variables are loaded
+pnpm run prisma:migrate-dev
+pnpm run prisma:migrate-deploy # Assuming a similar script will be created for deploy
 
 # Seed database
 pnpm run db:seed
@@ -182,7 +187,8 @@ pnpm run db:seed
 │   │   ├── bills-table.tsx           # Main bills data table
 │   │   ├── bills-filters.tsx         # Filter controls
 │   │   ├── bill-notes-dialog.tsx     # Notes modal dialog
-│   │   └── bill-assign-dialog.tsx    # Assignment dialog
+│   │   ├── assign-bills-form.tsx     # Form for assigning bills
+│   │   └── pagination.tsx            # Pagination component
 │   ├── dashboard/
 │   │   ├── kpi-cards.tsx             # KPI metric cards
 │   │   ├── aging-chart.tsx           # Aging distribution chart
@@ -228,12 +234,15 @@ pnpm run db:seed
 │   └── use-debounce.ts               # Debounce utility
 ├── middleware.ts                     # Next.js middleware for auth
 ├── prisma/
-│   ├── schema.prisma                 # Prisma schema (if used)
+│   ├── schema.prisma                 # Prisma schema
 │   └── seed.ts                       # Database seeding
+├── scripts/
+│   └── prisma-script-runner.js       # Helper script for running Prisma commands with dotenv
 ├── public/
 │   └── images/                       # Static assets
 ├── .env.local                        # Environment variables (not committed)
 ├── .env.example                      # Example env file
+├── prisma.config.ts                  # Prisma 7 configuration file
 ├── next.config.js                    # Next.js configuration
 ├── tailwind.config.ts                # Tailwind configuration
 ├── tsconfig.json                     # TypeScript configuration
@@ -289,7 +298,6 @@ generator client {
 
 datasource db {
   provider = "sqlserver"
-  url      = env("COLLECTIONS_DATABASE_URL")
 }
 
 model User {
@@ -298,7 +306,7 @@ model User {
   email                 String                 @unique @db.NVarChar(100)
   passwordHash          String                 @db.NVarChar(255)
   fullName              String?                @db.NVarChar(100)
-  role                  UserRole
+  role                  String                 // Changed from UserRole enum to String
   isActive              Boolean                @default(true)
   createdAt             DateTime               @default(now())
   lastLogin             DateTime?
@@ -313,12 +321,6 @@ model User {
   @@map("users")
 }
 
-enum UserRole {
-  Admin
-  Manager
-  Collector
-}
-
 model BillAssignment {
   id              Int       @id @default(autoincrement())
   billId          String    @unique @db.NVarChar(50)
@@ -326,8 +328,8 @@ model BillAssignment {
   assignedAt      DateTime  @default(now())
   assignedBy      Int
   
-  user            User      @relation("AssignedCollector", fields: [userId], references: [id])
-  assignedByUser  User      @relation("AssignmentCreator", fields: [assignedBy], references: [id])
+  user            User      @relation("AssignedCollector", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignedByUser  User      @relation("AssignmentCreator", fields: [assignedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("bill_assignments")
 }
@@ -381,29 +383,17 @@ model CollectionTask {
   taskType          String    @db.VarChar(50)
   taskDescription   String?   @db.Text
   dueDate           DateTime  @db.Date
-  priority          Priority  @default(Normal)
-  status            TaskStatus @default(Pending)
+  priority          String    @default("Normal") // Changed from Priority enum to String
+  status            String    @default("Pending") // Changed from TaskStatus enum to String
   completedDate     DateTime?
   completedBy       Int?
   notes             String?   @db.Text
   createdAt         DateTime  @default(now())
   
-  assignee          User      @relation("TaskAssignee", fields: [assignedTo], references: [id])
-  completer         User?     @relation("TaskCompleter", fields: [completedBy], references: [id])
+  assignee          User      @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  completer         User?     @relation("TaskCompleter", fields: [completedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("collection_tasks")
-}
-
-enum Priority {
-  High
-  Normal
-  Low
-}
-
-enum TaskStatus {
-  Pending
-  InProgress
-  Completed
 }
 
 model QueueDefinition {
@@ -427,7 +417,7 @@ model SystemSetting {
 
   @@map("system_settings")
 }
-```
+
 
 ### Redis Cache Architecture
 
@@ -717,7 +707,7 @@ pnpm dlx shadcn-ui@latest add skeleton
 1. **MUNIS Interface**: Read-only SQL queries to `dbo.unpaidbills` and other views - NEVER write to MUNIS database
 2. **CIS Interface**: Separate connection for utility billing data
 3. **Data Synchronization**: Nightly batch job (cron or scheduled API route) to refresh customer balances
-4. **Real-Time Updates**: Activity tracking writes immediately to collections database
+4. **Real-Time Updates**: Activity tracking writes immediately to collections database (configured via `DATABASE_URL`)
 5. **Redis Caching**: Cache MUNIS queries with appropriate TTL, invalidate on data changes
 
 ### Security Requirements
