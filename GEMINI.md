@@ -617,6 +617,7 @@ export async function clearAllCache(): Promise<void> {
    - Components: `BillsTable`, `BillsFilters`, `BillNotesDialog`
 
 3. **Notes Dialog** (Modal on Collection Queue)
+   - The dialog width has been increased to accommodate more columns for special conditions and better display of information.
    - Activity timeline (all contact history for a bill)
    - Customer contact information
    - Special conditions from MUNIS

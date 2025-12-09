@@ -33,15 +33,14 @@ export function BillNotesDialog({ bill }: BillNotesDialogProps) {
           View/Add Notes
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[900px]">
         <DialogHeader>
           <DialogTitle>
-            Collection Notes for BillId #{bill.BillID} (Customer
-            ID: {bill.CustomerID})
+            Collection Notes for BillId #{bill.BillID} (CustomerID: {bill.CustomerID})
           </DialogTitle>
         </DialogHeader>
         <div className="text-sm text-red-600">
-          These notes are only for this debt collection system; they
+          **These notes are only for this debt collection system; they
           won’t be written to Munis.
         </div>
         {/* Notes list placeholder */}
